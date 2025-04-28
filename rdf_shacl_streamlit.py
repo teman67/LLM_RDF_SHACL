@@ -9,6 +9,7 @@ from pyvis.network import Network
 import tempfile
 import streamlit.components.v1 as components
 import uuid
+import re
 from dotenv import load_dotenv
 load_dotenv()
 
@@ -348,6 +349,7 @@ Input fields:
         # ---------- Visualize with NetworkX + Pyvis ----------
         st.subheader("🌐 RDF Graph Visualization")
 
+        # Update the visualization section with larger dimensions and improved layout settings
         def visualize_rdf(rdf_text):
             g = Graph().parse(data=rdf_text, format="turtle")
             nx_graph = nx.DiGraph()
@@ -355,21 +357,100 @@ Input fields:
             for s, p, o in g:
                 nx_graph.add_edge(str(s), str(o), label=str(p))
 
-            net = Network(height="700px", width="100%", directed=True)
-
+            # Create a larger network with improved physics settings
+            net = Network(height="900px", width="100%", directed=True, notebook=False)
+            
+            # Configure physics for better graph spacing
+            net.barnes_hut(gravity=-8000, central_gravity=0.3, spring_length=200, spring_strength=0.05, damping=0.09)
+            
+            # Increase node spacing
+            net.repulsion(node_distance=300, central_gravity=0.01, spring_length=300, spring_strength=0.05, damping=0.09)
+            
+            # Add nodes with larger size
+            # Inside your visualize_rdf function, update the node addition logic:
             for node in nx_graph.nodes:
-                net.add_node(node, label=node)
+                # Extract shorter node labels for readability
+                short_label = node.split("/")[-1] if "/" in node else node
+                short_label = short_label.split("#")[-1] if "#" in short_label else short_label
+                
+                # Check if this is a blank node (starts with 'n' followed by numbers)
+                is_blank_node = bool(re.match(r'^n\d+$', short_label))
+                
+                # Use different styling for blank nodes
+                if is_blank_node:
+                    node_color = "#E8E8E8"  # Light gray
+                    node_size = 15  # Smaller size
+                    label = ""  # Hide the label
+                else:
+                    node_color = "#97C2FC"  # Default blue
+                    node_size = 25  # Normal size
+                    label = short_label
+                
+                net.add_node(node, label=label, size=node_size, 
+                            color=node_color, font={'size': 16}, 
+                            title=node)  # Title shows on hover
 
+            # Add edges with better visibility
             for u, v, d in nx_graph.edges(data=True):
-                net.add_edge(u, v, label=d["label"])
+                # Extract shorter edge labels
+                edge_label = d["label"].split("/")[-1] if "/" in d["label"] else d["label"]
+                edge_label = edge_label.split("#")[-1] if "#" in edge_label else edge_label
+                
+                net.add_edge(u, v, label=edge_label, font={'size': 12}, width=1.5, title=d["label"])
+
+            # Set options for better visualization
+            net.set_options("""
+            const options = {
+                "physics": {
+                    "enabled": true,
+                    "stabilization": {
+                        "iterations": 100,
+                        "updateInterval": 10,
+                        "fit": true
+                    },
+                    "barnesHut": {
+                        "gravitationalConstant": -8000,
+                        "springLength": 250,
+                        "springConstant": 0.04,
+                        "damping": 0.09
+                    }
+                },
+                "layout": {
+                    "improvedLayout": true,
+                    "hierarchical": {
+                        "enabled": false
+                    }
+                },
+                "interaction": {
+                    "navigationButtons": true,
+                    "keyboard": true,
+                    "hover": true,
+                    "multiselect": true,
+                    "tooltipDelay": 100
+                }
+            }
+            """)
 
             tmp_dir = tempfile.mkdtemp()
             html_path = os.path.join(tmp_dir, f"graph_{uuid.uuid4()}.html")
             net.save_graph(html_path)
             return html_path
 
+        # Update the HTML component size
         html_file = visualize_rdf(rdf_code)
         with open(html_file, 'r', encoding='utf-8') as f:
             graph_html = f.read()
 
-        components.html(graph_html, height=800, width=1000, scrolling=True)
+        # Render with larger dimensions
+        components.html(graph_html, height=1000, width=1200, scrolling=True)
+
+        # Add instructions for graph interaction
+        st.markdown("""
+        ### Graph Navigation Instructions:
+        - **Zoom**: Use mouse wheel or pinch gesture
+        - **Pan**: Click and drag empty space
+        - **Move nodes**: Click and drag nodes to rearrange
+        - **View details**: Hover over nodes or edges for full information
+        - **Select multiple**: Hold Ctrl or Cmd while clicking nodes
+        - **Reset view**: Double-click on empty space
+        """)
