@@ -201,13 +201,22 @@ When presented with a creep test report, generate:
 
         term_prompt = f"""
 You are an ontology expert. For each field below, suggest a matching ontology class or property
-from EMMO or CHAMEO, like emmo:MechanicalTesting or chameo:YieldStrength.
+from EMMO, MATWERK, PMDcore, NFDI core, IAO, OBI, OBO, QUDT like emmo:MechanicalTesting or chameo:YieldStrength.
 
 Input:
 {data_input}
 """
 
-        
+        ontology_response = client.chat.completions.create(
+            model="gpt-4",
+            messages=[
+                {"role": "system", "content": "You're an ontology assistant for material science."},
+                {"role": "user", "content": term_prompt}
+            ],
+            temperature=0.3,
+        )
+
+        st.markdown(ontology_response.choices[0].message.content)
 
         # ---------- Visualize with NetworkX + Pyvis ----------
         st.subheader("🌐 RDF Graph Visualization")
