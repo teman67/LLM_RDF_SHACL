@@ -1,5 +1,6 @@
 import streamlit as st
-from openai import OpenAI  # updated import
+from openai import OpenAI
+from anthropic import Anthropic
 import os
 from rdflib import Graph
 from pyshacl import validate
@@ -7,25 +8,33 @@ import networkx as nx
 from pyvis.network import Network
 import tempfile
 import streamlit.components.v1 as components
+import uuid
 from dotenv import load_dotenv
 load_dotenv()
 
-api_key = os.getenv("OPENAI_API_KEY")
-# print("API Key:", api_key)  # Debugging line to check if the key is loaded
-
-client = OpenAI(api_key=os.getenv("OPENAI_API_KEY"))
+# Initialize clients
+openai_client = OpenAI(api_key=os.getenv("OPENAI_API_KEY"))
+anthropic_client = Anthropic(api_key=os.getenv("ANTHROPIC_API_KEY"))
 
 st.title("🔬 RDF & SHACL Generator + Validator + Ontology Visualizer")
+
+# Model selection
+llm_provider = st.radio("Select LLM Provider:", ["OpenAI", "Anthropic (Claude)"])
+
+if llm_provider == "OpenAI":
+    model_options = ["gpt-4o", "gpt-4o-mini", "gpt-4-turbo"]
+    selected_model = st.selectbox("Select OpenAI Model:", model_options, index=1)
+else:
+    model_options = ["claude-3-opus-20240229", "claude-3-sonnet-20240229", "claude-3-haiku-20240307"]
+    selected_model = st.selectbox("Select Claude Model:", model_options, index=1)
 
 # User input
 data_input = st.text_area("Paste your mechanical test data (e.g. JSON or description):", height=200)
 generate = st.button("Generate RDF & SHACL")
 
 if generate and data_input.strip():
-    with st.spinner("Calling LLM to generate RDF and SHACL..."):
-
-
-        system_prompt =  """
+    with st.spinner(f"Calling {llm_provider} to generate RDF and SHACL..."):
+        system_prompt = """
 You are an expert in semantic data modeling for materials science. Your task is to transform mechanical creep test reports into structured RDF and SHACL models.
 
 When presented with a creep test report, generate:
@@ -143,24 +152,45 @@ When presented with a creep test report, generate:
 - Maintain interoperability with materials science domain ontologies and data standards.
 """
 
+        # Use the selected LLM provider
+        if llm_provider == "OpenAI":
+            response = openai_client.chat.completions.create(
+                model=selected_model,
+                messages=[
+                    {"role": "system", "content": system_prompt},
+                    {"role": "user", "content": data_input}
+                ],
+                temperature=0.3,
+            )
+            content = response.choices[0].message.content
+        else:
+            response = anthropic_client.messages.create(
+                model=selected_model,
+                max_tokens=4000,
+                temperature=0.3,
+                system=system_prompt,
+                messages=[
+                    {"role": "user", "content": data_input}
+                ]
+            )
+            content = response.content[0].text
 
-
-        # LLM Call
-        response = client.chat.completions.create(
-            # model="gpt-4",
-            model="gpt-4o-mini",
-            messages=[
-                {"role": "system", "content": system_prompt},
-                {"role": "user", "content": data_input}
-            ],
-            temperature=0.3,
-        )
-
-        # Parse result
-        content = response.choices[0].message.content
+        # Parse result - handle various response formats
         parts = content.split("```")
-        rdf_code = parts[1].replace("turtle", "").strip()
-        shacl_code = parts[3].replace("turtle", "").strip()
+        
+        # Extract RDF and SHACL code from different parts of the response
+        rdf_code = ""
+        shacl_code = ""
+        
+        # Look for turtle code blocks
+        for i, part in enumerate(parts):
+            if i % 2 == 1:  # This is a code block
+                if "turtle" in part.lower() or "ttl" in part.lower() or "@prefix" in part:
+                    part_clean = part.replace("turtle", "").strip()
+                    if not rdf_code:
+                        rdf_code = part_clean
+                    elif not shacl_code:
+                        shacl_code = part_clean
 
         st.subheader("📄 RDF Output")
         st.code(rdf_code, language="turtle")
@@ -216,18 +246,30 @@ Input fields:
 {data_input}
 """
 
+        # Get ontology suggestions using the selected model
+        if llm_provider == "OpenAI":
+            ontology_response = openai_client.chat.completions.create(
+                model=selected_model,
+                messages=[
+                    {"role": "system", "content": "You're an ontology assistant for material science."},
+                    {"role": "user", "content": term_prompt}
+                ],
+                temperature=0.3,
+            )
+            ontology_content = ontology_response.choices[0].message.content
+        else:
+            ontology_response = anthropic_client.messages.create(
+                model=selected_model,
+                max_tokens=2000,
+                temperature=0.3,
+                system="You're an ontology assistant for material science.",
+                messages=[
+                    {"role": "user", "content": term_prompt}
+                ]
+            )
+            ontology_content = ontology_response.content[0].text
 
-        ontology_response = client.chat.completions.create(
-            # model="gpt-4",
-            model="gpt-4o-mini",
-            messages=[
-                {"role": "system", "content": "You're an ontology assistant for material science."},
-                {"role": "user", "content": term_prompt}
-            ],
-            temperature=0.3,
-        )
-
-        st.markdown(ontology_response.choices[0].message.content)
+        st.markdown(ontology_content)
 
         # ---------- Visualize with NetworkX + Pyvis ----------
         st.subheader("🌐 RDF Graph Visualization")
@@ -239,7 +281,6 @@ Input fields:
             for s, p, o in g:
                 nx_graph.add_edge(str(s), str(o), label=str(p))
 
-            # net = Network(height="500px", width="100%", directed=True)
             net = Network(height="700px", width="100%", directed=True)
 
             for node in nx_graph.nodes:
@@ -249,15 +290,12 @@ Input fields:
                 net.add_edge(u, v, label=d["label"])
 
             tmp_dir = tempfile.mkdtemp()
-            html_path = os.path.join(tmp_dir, "graph.html")
+            html_path = os.path.join(tmp_dir, f"graph_{uuid.uuid4()}.html")
             net.save_graph(html_path)
             return html_path
 
         html_file = visualize_rdf(rdf_code)
-        # components.iframe(html_file, height=500)
         with open(html_file, 'r', encoding='utf-8') as f:
             graph_html = f.read()
-        # components.html(graph_html, height=550, scrolling=True)
+
         components.html(graph_html, height=800, width=1000, scrolling=True)
-
-
