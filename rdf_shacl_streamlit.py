@@ -200,15 +200,26 @@ When presented with a creep test report, generate:
         st.subheader("🔎 Suggested Ontology Terms")
 
         term_prompt = f"""
-You are an ontology expert. For each field below, suggest a matching ontology class or property
-from EMMO, MATWERK, PMDcore, NFDI core, IAO, OBI, OBO, QUDT like emmo:MechanicalTesting or chameo:YieldStrength.
+You are an ontology expert specializing in material science. 
+Your task is to map each field listed below to an appropriate ontology class or property 
+from one of the following sources: EMMO, MATWERK, PMDcore, NFDI Core, IAO, OBI, OBO, or QUDT.
 
-Input:
+Instructions:
+- Only suggest classes or properties that truly exist in the specified ontologies.
+- If no suitable match is found, clearly respond with "No match found" instead of guessing.
+- For each field, provide:
+    - Ontology name
+    - Class or property name
+    - (Optional) Ontology ID or link, if available.
+
+Input fields:
 {data_input}
 """
 
+
         ontology_response = client.chat.completions.create(
-            model="gpt-4",
+            # model="gpt-4",
+            model="gpt-4o-mini",
             messages=[
                 {"role": "system", "content": "You're an ontology assistant for material science."},
                 {"role": "user", "content": term_prompt}
