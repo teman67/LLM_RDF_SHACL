@@ -8,3 +8,81 @@
   "elongation": 20,
   "hardness": 150
 }
+
+
+
+
+BAM:
+
+BAM 5.2 Vh5205_C-95.LIS						
+------------------------------------						
+ENTRY	SYMBOL	UNIT		* Information common to all tests		
+Date of test start			30.8.23 9:06 AM			
+Test ID			Vh5205_C-95			
+Test standard			DIN EN ISO 204:2019-4	*		
+Specified temperature	T	?	980 °C	*		
+Type of loading			Tension	*		
+Initial stress	Ro	MPa	140			
+(Digital) Material Identifier			CMSX-6	*		
+"Description of the manufacturing process - as-tested material
+"			Single Crystal Investment Casting from a Vacuum Induction Refined Ingot and subsequent Heat Treatment (annealed and aged).	*		
+Single crystal orientation		°	7,5			
+Type of test piece II			Round cross section	*		
+Type of test piece III			Smooth test piece	*		
+Sensor type - Contacting extensometer			Clip-on extensometer	*		
+Min. test piece diameter at room temperature	D	mm	5,99			
+Reference length for calculation of percentage elongations	Lr = Lo	mm	23,9			
+Reference length for calculation of percentage extensions	Lr = Le	mm	22,9			
+Heating time		h	1,61			
+Soak time before the test		h	2,81			
+Test duration	t	h	1010			
+Creep rupture time	tu	h	Not applicable			
+Percentage permanent elongation	Aper	%	1,14			
+Percentage elongation after creep fracture	Au	%	Not applicable			
+Percentage reduction of area after creep fracture	Zu	%	Not applicable			
+Percentage total extension	et	%	0,964			
+Percentage initial total extension	eti	%	0,153			
+Percentage elastic extension	ee	%	0,153			
+Percentage initial plastic extension	ei	%	0			
+Percentage plastic extension	ep	%	0,811			
+Percentage creep extension	ef	%	0,811
+
+
+
+
+
+
+---------------------------------------- example 2 ------------------------------------------------
+
+BAM 5.2  Kriechdehnung  BCR425-280-4.LIS				
+------------------------------------				
+				
+Probenbezeichnung                  				BCR425-280-4
+Versuchsnummer							KK 975
+Versuchs-Datum                     				12.09.2017
+Projekt                              				int. Ringversuch 2017
+Werkstoff                          				Nimonic 75
+Zustand/Orientierung               		hkl/Theta,Rho	
+Bearbeiter                         				NN1
+Prüfmaschine                      				Zug 4
+max. Prüfkraft                       			kN	20
+Dehnungsbereich                    			%	67
+Prüfnorm							ASTM E 139
+Probenzeichnung                    				KRI012-001 Form B
+Probenform                         				rund
+min. Probendurchmesser bei RT           		mm	5,999
+Prüftemperatur PT                 			°C	600
+Prüfspannung                       			MPa	160
+Prüfkraft                           			kN	4,52
+Anfangsmesslänge bei RT           			mm	27,71
+Aufheizzeit (PT erreicht)       			h	2,86
+Haltezeit                           			h	20,50
+Belastungsgeschwindigkeit       			MPa/s	14,43
+Entlastungsgeschwindigkeit       			MPa/s	-
+Versuchsdauer                       			h	531,55
+Bruchzeit						h	-
+Kriechdehnung                    			%	4,08
+plastische Dehnung					%	4,08
+gesamte Dehnung						%	4,16
+-                                     				
+	
