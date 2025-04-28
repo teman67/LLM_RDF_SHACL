@@ -260,7 +260,7 @@ Input fields:
         else:
             ontology_response = anthropic_client.messages.create(
                 model=selected_model,
-                max_tokens=2000,
+                max_tokens=4000,
                 temperature=0.3,
                 system="You're an ontology assistant for material science.",
                 messages=[
