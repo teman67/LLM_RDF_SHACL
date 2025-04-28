@@ -1,0 +1,10 @@
+{
+  "material": "Steel A36",
+  "test_type": "Tensile Test",
+  "temperature": 25,
+  "strain_rate": 0.005,
+  "yield_strength": 250,
+  "ultimate_tensile_strength": 400,
+  "elongation": 20,
+  "hardness": 150
+}
