@@ -12,11 +12,35 @@ import uuid
 from dotenv import load_dotenv
 load_dotenv()
 
-# Initialize clients
-openai_client = OpenAI(api_key=os.getenv("OPENAI_API_KEY"))
-anthropic_client = Anthropic(api_key=os.getenv("ANTHROPIC_API_KEY"))
+# # Initialize clients
+# openai_client = OpenAI(api_key=os.getenv("OPENAI_API_KEY"))
+# anthropic_client = Anthropic(api_key=os.getenv("ANTHROPIC_API_KEY"))
+st.set_page_config(page_title="RDF & SHACL Generator Using LLM", layout="wide")
+st.title("🔬 RDF & SHACL Generator + Validator + Ontology Visualizer Using LLM")
 
-st.title("🔬 RDF & SHACL Generator + Validator + Ontology Visualizer")
+# Add API key input fields to the sidebar
+st.sidebar.header("API Keys")
+
+st.sidebar.markdown("**OpenAI API Key**")
+st.sidebar.markdown("Get your OpenAI API key from [OpenAI Platform](https://platform.openai.com/api-keys)")
+openai_api_key = st.sidebar.text_input("OpenAI API Key", type="password")
+
+st.sidebar.markdown("**Anthropic API Key**")
+st.sidebar.markdown("Get your Anthropic API key from [Anthropic Console](https://www.merge.dev/blog/anthropic-api-key)")
+anthropic_api_key = st.sidebar.text_input("Anthropic API Key", type="password")
+
+# Add info about API billing
+st.sidebar.info("Note: Using these APIs will incur charges to your account based on the selected model and usage.")
+
+# Initialize clients with user-provided keys
+openai_client = None
+anthropic_client = None
+
+if openai_api_key:
+    openai_client = OpenAI(api_key=openai_api_key)
+    
+if anthropic_api_key:
+    anthropic_client = Anthropic(api_key=anthropic_api_key)
 
 # Model selection
 llm_provider = st.radio("Select LLM Provider:", ["OpenAI", "Anthropic (Claude)"])
@@ -25,16 +49,66 @@ if llm_provider == "OpenAI":
     model_options = ["gpt-4o", "gpt-4o-mini", "gpt-4-turbo"]
     selected_model = st.selectbox("Select OpenAI Model:", model_options, index=1)
 else:
-    model_options = ["claude-3-opus-20240229", "claude-3-sonnet-20240229", "claude-3-haiku-20240307"]
+    model_options = ["claude-3-7-sonnet-20250219", "claude-3-5-haiku-20241022"]
     selected_model = st.selectbox("Select Claude Model:", model_options, index=1)
 
+
+
 # User input
-data_input = st.text_area("Paste your mechanical test data (e.g. JSON or description):", height=200)
+# Example data option
+st.subheader("Input Options")
+use_example = st.checkbox("Use example data")
+
+creep_test_example = """BAM 5.2 Vh5205_C-95.LIS						
+------------------------------------						
+ENTRY	SYMBOL	UNIT		* Information common to all tests		
+Date of test start			30.8.23 9:06 AM			
+Test ID			Vh5205_C-95			
+Test standard			DIN EN ISO 204:2019-4	*		
+Specified temperature	T	?	980 °C	*		
+Type of loading			Tension	*		
+Initial stress	Ro	MPa	140			
+(Digital) Material Identifier			CMSX-6	*		
+"Description of the manufacturing process - as-tested material
+"			Single Crystal Investment Casting from a Vacuum Induction Refined Ingot and subsequent Heat Treatment (annealed and aged).	*		
+Single crystal orientation		°	7,5			
+Type of test piece II			Round cross section	*		
+Type of test piece III			Smooth test piece	*		
+Sensor type - Contacting extensometer			Clip-on extensometer	*		
+Min. test piece diameter at room temperature	D	mm	5,99			
+Reference length for calculation of percentage elongations	Lr = Lo	mm	23,9			
+Reference length for calculation of percentage extensions	Lr = Le	mm	22,9			
+Heating time		h	1,61			
+Soak time before the test		h	2,81			
+Test duration	t	h	1010			
+Creep rupture time	tu	h	Not applicable			
+Percentage permanent elongation	Aper	%	1,14			
+Percentage elongation after creep fracture	Au	%	Not applicable			
+Percentage reduction of area after creep fracture	Zu	%	Not applicable			
+Percentage total extension	et	%	0,964			
+Percentage initial total extension	eti	%	0,153			
+Percentage elastic extension	ee	%	0,153			
+Percentage initial plastic extension	ei	%	0			
+Percentage plastic extension	ep	%	0,811			
+Percentage creep extension	ef	%	0,811"""
+
+# Modify the user input text area to show the example if checked
+if use_example:
+    data_input = st.text_area("Mechanical test data:", value=creep_test_example, height=300)
+else:
+    data_input = st.text_area("Paste your mechanical test data (e.g. JSON or description):", height=200)
 generate = st.button("Generate RDF & SHACL")
 
+# Update the generate button check
 if generate and data_input.strip():
-    with st.spinner(f"Calling {llm_provider} to generate RDF and SHACL..."):
-        system_prompt = """
+    # Check if API keys are provided based on selected model
+    if llm_provider == "OpenAI" and not openai_api_key:
+        st.error("Please enter your OpenAI API key in the sidebar.")
+    elif llm_provider == "Anthropic (Claude)" and not anthropic_api_key:
+        st.error("Please enter your Anthropic API key in the sidebar.")
+    else:
+        with st.spinner(f"Calling {llm_provider} to generate RDF and SHACL..."):
+            system_prompt = """
 You are an expert in semantic data modeling for materials science. Your task is to transform mechanical creep test reports into structured RDF and SHACL models.
 
 When presented with a creep test report, generate:
@@ -260,7 +334,7 @@ Input fields:
         else:
             ontology_response = anthropic_client.messages.create(
                 model=selected_model,
-                max_tokens=4000,
+                max_tokens=6000,
                 temperature=0.3,
                 system="You're an ontology assistant for material science.",
                 messages=[
