@@ -36,6 +36,13 @@ st.sidebar.markdown("**Ollama Configuration**")
 st.sidebar.markdown("Enter your Ollama API endpoint")
 ollama_endpoint = st.sidebar.text_input("Ollama API Endpoint", value="http://localhost:11434")
 
+# Add temperature settings - will be shown conditionally
+temperature_values = {
+    "OpenAI": 0.3,
+    "Anthropic (Claude)": 0.3,
+    "Ollama (Self-hosted)": 0.3
+}
+
 # Add info about API billing
 st.sidebar.info("Note: Using these APIs will incur charges to your account based on the selected model and usage. Ollama is self-hosted and free to use.")
 
@@ -55,13 +62,19 @@ llm_provider = st.radio("Select LLM Provider:", ["OpenAI", "Anthropic (Claude)",
 if llm_provider == "OpenAI":
     model_options = ["gpt-4o", "gpt-4o-mini", "gpt-4-turbo"]
     selected_model = st.selectbox("Select OpenAI Model:", model_options, index=1)
+    temperature = st.slider("Temperature", min_value=0.0, max_value=1.0, value=temperature_values["OpenAI"], step=0.1,
+                           help="Lower values make responses more focused and deterministic. Higher values make output more random and creative.")
 elif llm_provider == "Anthropic (Claude)":
     model_options = ["claude-3-7-sonnet-20250219", "claude-3-5-haiku-20241022"]
     selected_model = st.selectbox("Select Claude Model:", model_options, index=1)
+    temperature = st.slider("Temperature", min_value=0.0, max_value=1.0, value=temperature_values["Anthropic (Claude)"], step=0.1,
+                           help="Lower values make responses more focused and deterministic. Higher values make output more random and creative.")
 else:  # Ollama
     # These are common Ollama models, but users might have others available
     model_options = ["llama3.3:latest", "deepseek-r1:70b", "gemma3:27b", "llama3.2-vision:90b-instruct-q8_0"]
     selected_model = st.selectbox("Select Ollama Model:", model_options, index=0)
+    temperature = st.slider("Temperature", min_value=0.0, max_value=1.0, value=temperature_values["Ollama (Self-hosted)"], step=0.1,
+                           help="Lower values make responses more focused and deterministic. Higher values make output more random and creative.")
 
 # User input
 # Example data option
@@ -109,7 +122,7 @@ else:
 generate = st.button("Generate RDF & SHACL")
 
 # Function to call Ollama API
-def call_ollama_api(endpoint, model, prompt, system_prompt=None, temperature=0.3):
+def call_ollama_api(endpoint, model, prompt, system_prompt=None, temperature=0.7):
     headers = {
         "Content-Type": "application/json"
     }
@@ -122,15 +135,15 @@ def call_ollama_api(endpoint, model, prompt, system_prompt=None, temperature=0.3
                 {"role": "system", "content": system_prompt},
                 {"role": "user", "content": prompt}
             ],
-            "temperature": temperature,
-            "stream": False
+            "stream": False,
+            "temperature": temperature
         }
     else:
         data = {
             "model": model,
             "prompt": prompt,
-            "temperature": temperature,
-            "stream": False
+            "stream": False,
+            "temperature": temperature
         }
     
     try:
@@ -143,7 +156,8 @@ def call_ollama_api(endpoint, model, prompt, system_prompt=None, temperature=0.3
         else:
             # Try the generate endpoint as fallback for older Ollama versions
             generate_url = f"{endpoint.rstrip('/')}/api/generate"
-            response = requests.post(generate_url, json={"model": model, "prompt": prompt, "temperature": temperature}, headers=headers)
+            generate_data = {"model": model, "prompt": prompt, "temperature": temperature}
+            response = requests.post(generate_url, json=generate_data, headers=headers)
             
             if response.status_code == 200:
                 return response.json()["response"]
@@ -291,14 +305,14 @@ When presented with a creep test report, generate:
                         {"role": "system", "content": system_prompt},
                         {"role": "user", "content": data_input}
                     ],
-                    temperature=0.3,
+                    temperature=temperature,
                 )
                 content = response.choices[0].message.content
             elif llm_provider == "Anthropic (Claude)":
                 response = anthropic_client.messages.create(
                     model=selected_model,
                     max_tokens=4000,
-                    temperature=0.3,
+                    temperature=temperature,
                     system=system_prompt,
                     messages=[
                         {"role": "user", "content": data_input}
@@ -308,7 +322,7 @@ When presented with a creep test report, generate:
             else:  # Ollama
                 # For Ollama, we'll combine system prompt and user input
                 combined_prompt = f"{system_prompt}\n\nUser Input:\n{data_input}\n\nPlease provide the RDF in Turtle format and the SHACL shape in Turtle format."
-                content = call_ollama_api(ollama_endpoint, selected_model, combined_prompt, system_prompt, temperature=0.3)
+                content = call_ollama_api(ollama_endpoint, selected_model, data_input, system_prompt, temperature)
 
         # Parse result - handle various response formats
         parts = content.split("```")
@@ -389,14 +403,14 @@ Input fields:
                     {"role": "system", "content": "You're an ontology assistant for material science."},
                     {"role": "user", "content": term_prompt}
                 ],
-                temperature=0.3,
+                temperature=temperature,
             )
             ontology_content = ontology_response.choices[0].message.content
         elif llm_provider == "Anthropic (Claude)":
             ontology_response = anthropic_client.messages.create(
                 model=selected_model,
                 max_tokens=6000,
-                temperature=0.3,
+                temperature=temperature,
                 system="You're an ontology assistant for material science.",
                 messages=[
                     {"role": "user", "content": term_prompt}
@@ -404,8 +418,8 @@ Input fields:
             )
             ontology_content = ontology_response.content[0].text
         else:  # Ollama
-            # system_prompt_ontology = "You're an ontology assistant for material science."
-            ontology_content = call_ollama_api(ollama_endpoint, selected_model, term_prompt, temperature=0.3)
+            system_prompt_ontology = "You're an ontology assistant for material science."
+            ontology_content = call_ollama_api(ollama_endpoint, selected_model, term_prompt, system_prompt_ontology, temperature)
 
         st.markdown(ontology_content)
 
@@ -506,3 +520,14 @@ Input fields:
 
         # Render with larger dimensions
         components.html(graph_html, height=1000, width=1200, scrolling=True)
+
+        # Add instructions for graph interaction
+        st.markdown("""
+        ### Graph Navigation Instructions:
+        - **Zoom**: Use mouse wheel or pinch gesture
+        - **Pan**: Click and drag empty space
+        - **Move nodes**: Click and drag nodes to rearrange
+        - **View details**: Hover over nodes or edges for full information
+        - **Select multiple**: Hold Ctrl or Cmd while clicking nodes
+        - **Reset view**: Double-click on empty space
+        """)
