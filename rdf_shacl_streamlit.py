@@ -109,7 +109,7 @@ else:
 generate = st.button("Generate RDF & SHACL")
 
 # Function to call Ollama API
-def call_ollama_api(endpoint, model, prompt, system_prompt=None):
+def call_ollama_api(endpoint, model, prompt, system_prompt=None, temperature=0.3):
     headers = {
         "Content-Type": "application/json"
     }
@@ -122,12 +122,14 @@ def call_ollama_api(endpoint, model, prompt, system_prompt=None):
                 {"role": "system", "content": system_prompt},
                 {"role": "user", "content": prompt}
             ],
+            "temperature": temperature,
             "stream": False
         }
     else:
         data = {
             "model": model,
             "prompt": prompt,
+            "temperature": temperature,
             "stream": False
         }
     
@@ -141,7 +143,7 @@ def call_ollama_api(endpoint, model, prompt, system_prompt=None):
         else:
             # Try the generate endpoint as fallback for older Ollama versions
             generate_url = f"{endpoint.rstrip('/')}/api/generate"
-            response = requests.post(generate_url, json={"model": model, "prompt": prompt}, headers=headers)
+            response = requests.post(generate_url, json={"model": model, "prompt": prompt, "temperature": temperature}, headers=headers)
             
             if response.status_code == 200:
                 return response.json()["response"]
@@ -306,7 +308,7 @@ When presented with a creep test report, generate:
             else:  # Ollama
                 # For Ollama, we'll combine system prompt and user input
                 combined_prompt = f"{system_prompt}\n\nUser Input:\n{data_input}\n\nPlease provide the RDF in Turtle format and the SHACL shape in Turtle format."
-                content = call_ollama_api(ollama_endpoint, selected_model, data_input, system_prompt)
+                content = call_ollama_api(ollama_endpoint, selected_model, combined_prompt, system_prompt, temperature=0.3)
 
         # Parse result - handle various response formats
         parts = content.split("```")
@@ -402,8 +404,8 @@ Input fields:
             )
             ontology_content = ontology_response.content[0].text
         else:  # Ollama
-            system_prompt_ontology = "You're an ontology assistant for material science."
-            ontology_content = call_ollama_api(ollama_endpoint, selected_model, term_prompt, system_prompt_ontology)
+            # system_prompt_ontology = "You're an ontology assistant for material science."
+            ontology_content = call_ollama_api(ollama_endpoint, selected_model, term_prompt, temperature=0.3)
 
         st.markdown(ontology_content)
 
