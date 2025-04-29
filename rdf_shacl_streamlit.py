@@ -10,6 +10,7 @@ import tempfile
 import streamlit.components.v1 as components
 import uuid
 import re
+import requests
 from dotenv import load_dotenv
 load_dotenv()
 
@@ -30,8 +31,13 @@ st.sidebar.markdown("**Anthropic API Key**")
 st.sidebar.markdown("Get your Anthropic API key from [Anthropic Console](https://www.merge.dev/blog/anthropic-api-key)")
 anthropic_api_key = st.sidebar.text_input("Anthropic API Key", type="password")
 
+# Add Ollama endpoint configuration
+st.sidebar.markdown("**Ollama Configuration**")
+st.sidebar.markdown("Enter your Ollama API endpoint")
+ollama_endpoint = st.sidebar.text_input("Ollama API Endpoint", value="http://localhost:11434")
+
 # Add info about API billing
-st.sidebar.info("Note: Using these APIs will incur charges to your account based on the selected model and usage.")
+st.sidebar.info("Note: Using these APIs will incur charges to your account based on the selected model and usage. Ollama is self-hosted and free to use.")
 
 # Initialize clients with user-provided keys
 openai_client = None
@@ -44,16 +50,18 @@ if anthropic_api_key:
     anthropic_client = Anthropic(api_key=anthropic_api_key)
 
 # Model selection
-llm_provider = st.radio("Select LLM Provider:", ["OpenAI", "Anthropic (Claude)"])
+llm_provider = st.radio("Select LLM Provider:", ["OpenAI", "Anthropic (Claude)", "Ollama (Self-hosted)"])
 
 if llm_provider == "OpenAI":
     model_options = ["gpt-4o", "gpt-4o-mini", "gpt-4-turbo"]
     selected_model = st.selectbox("Select OpenAI Model:", model_options, index=1)
-else:
+elif llm_provider == "Anthropic (Claude)":
     model_options = ["claude-3-7-sonnet-20250219", "claude-3-5-haiku-20241022"]
     selected_model = st.selectbox("Select Claude Model:", model_options, index=1)
-
-
+else:  # Ollama
+    # These are common Ollama models, but users might have others available
+    model_options = ["llama3.3:latest", "deepseek-r1:70b", "gemma3:27b", "llama3.2-vision:90b-instruct-q8_0"]
+    selected_model = st.selectbox("Select Ollama Model:", model_options, index=0)
 
 # User input
 # Example data option
@@ -100,6 +108,50 @@ else:
     data_input = st.text_area("Paste your mechanical test data (e.g. JSON or description):", height=200)
 generate = st.button("Generate RDF & SHACL")
 
+# Function to call Ollama API
+def call_ollama_api(endpoint, model, prompt, system_prompt=None):
+    headers = {
+        "Content-Type": "application/json"
+    }
+    
+    # Format the request based on whether a system prompt is provided
+    if system_prompt:
+        data = {
+            "model": model,
+            "messages": [
+                {"role": "system", "content": system_prompt},
+                {"role": "user", "content": prompt}
+            ],
+            "stream": False
+        }
+    else:
+        data = {
+            "model": model,
+            "prompt": prompt,
+            "stream": False
+        }
+    
+    try:
+        # Use the chat endpoint
+        chat_url = f"{endpoint.rstrip('/')}/api/chat"
+        response = requests.post(chat_url, json=data, headers=headers)
+        
+        if response.status_code == 200:
+            return response.json()["message"]["content"]
+        else:
+            # Try the generate endpoint as fallback for older Ollama versions
+            generate_url = f"{endpoint.rstrip('/')}/api/generate"
+            response = requests.post(generate_url, json={"model": model, "prompt": prompt}, headers=headers)
+            
+            if response.status_code == 200:
+                return response.json()["response"]
+            else:
+                st.error(f"Ollama API Error: {response.status_code} - {response.text}")
+                return f"Error: Unable to get response from Ollama API. Status code: {response.status_code}"
+    except Exception as e:
+        st.error(f"Error connecting to Ollama API: {str(e)}")
+        return f"Error connecting to Ollama API: {str(e)}"
+
 # Update the generate button check
 if generate and data_input.strip():
     # Check if API keys are provided based on selected model
@@ -107,6 +159,8 @@ if generate and data_input.strip():
         st.error("Please enter your OpenAI API key in the sidebar.")
     elif llm_provider == "Anthropic (Claude)" and not anthropic_api_key:
         st.error("Please enter your Anthropic API key in the sidebar.")
+    elif llm_provider == "Ollama (Self-hosted)" and not ollama_endpoint:
+        st.error("Please enter your Ollama API endpoint in the sidebar.")
     else:
         with st.spinner(f"Calling {llm_provider} to generate RDF and SHACL..."):
             system_prompt = """
@@ -227,28 +281,32 @@ When presented with a creep test report, generate:
 - Maintain interoperability with materials science domain ontologies and data standards.
 """
 
-        # Use the selected LLM provider
-        if llm_provider == "OpenAI":
-            response = openai_client.chat.completions.create(
-                model=selected_model,
-                messages=[
-                    {"role": "system", "content": system_prompt},
-                    {"role": "user", "content": data_input}
-                ],
-                temperature=0.3,
-            )
-            content = response.choices[0].message.content
-        else:
-            response = anthropic_client.messages.create(
-                model=selected_model,
-                max_tokens=4000,
-                temperature=0.3,
-                system=system_prompt,
-                messages=[
-                    {"role": "user", "content": data_input}
-                ]
-            )
-            content = response.content[0].text
+            # Use the selected LLM provider
+            if llm_provider == "OpenAI":
+                response = openai_client.chat.completions.create(
+                    model=selected_model,
+                    messages=[
+                        {"role": "system", "content": system_prompt},
+                        {"role": "user", "content": data_input}
+                    ],
+                    temperature=0.3,
+                )
+                content = response.choices[0].message.content
+            elif llm_provider == "Anthropic (Claude)":
+                response = anthropic_client.messages.create(
+                    model=selected_model,
+                    max_tokens=4000,
+                    temperature=0.3,
+                    system=system_prompt,
+                    messages=[
+                        {"role": "user", "content": data_input}
+                    ]
+                )
+                content = response.content[0].text
+            else:  # Ollama
+                # For Ollama, we'll combine system prompt and user input
+                combined_prompt = f"{system_prompt}\n\nUser Input:\n{data_input}\n\nPlease provide the RDF in Turtle format and the SHACL shape in Turtle format."
+                content = call_ollama_api(ollama_endpoint, selected_model, data_input, system_prompt)
 
         # Parse result - handle various response formats
         parts = content.split("```")
@@ -332,7 +390,7 @@ Input fields:
                 temperature=0.3,
             )
             ontology_content = ontology_response.choices[0].message.content
-        else:
+        elif llm_provider == "Anthropic (Claude)":
             ontology_response = anthropic_client.messages.create(
                 model=selected_model,
                 max_tokens=6000,
@@ -343,6 +401,9 @@ Input fields:
                 ]
             )
             ontology_content = ontology_response.content[0].text
+        else:  # Ollama
+            system_prompt_ontology = "You're an ontology assistant for material science."
+            ontology_content = call_ollama_api(ollama_endpoint, selected_model, term_prompt, system_prompt_ontology)
 
         st.markdown(ontology_content)
 
@@ -443,14 +504,3 @@ Input fields:
 
         # Render with larger dimensions
         components.html(graph_html, height=1000, width=1200, scrolling=True)
-
-        # Add instructions for graph interaction
-        st.markdown("""
-        ### Graph Navigation Instructions:
-        - **Zoom**: Use mouse wheel or pinch gesture
-        - **Pan**: Click and drag empty space
-        - **Move nodes**: Click and drag nodes to rearrange
-        - **View details**: Hover over nodes or edges for full information
-        - **Select multiple**: Hold Ctrl or Cmd while clicking nodes
-        - **Reset view**: Double-click on empty space
-        """)
