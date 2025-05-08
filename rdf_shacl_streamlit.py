@@ -71,7 +71,7 @@ elif llm_provider == "Anthropic (Claude)":
                            help="Lower values make responses more focused and deterministic. Higher values make output more random and creative.")
 else:  # Ollama
     # These are common Ollama models, but users might have others available
-    model_options = ["llama3.3:latest", "deepseek-r1:70b-llama-distill-q8_0", "phi4-reasoning:14b-plus-fp16"]
+    model_options = ["llama3.3:70b-instruct-q8_0", "qwen3:32b-q8_0", "phi4-reasoning:14b-plus-fp16"]
     selected_model = st.selectbox("Select Ollama Model:", model_options, index=0)
     temperature = st.slider("Temperature", min_value=0.0, max_value=1.0, value=temperature_values["Ollama (Self-hosted)"], step=0.1,
                            help="Lower values make responses more focused and deterministic. Higher values make output more random and creative.")
@@ -417,7 +417,7 @@ Both outputs must be syntactically valid and semantically aligned with materials
                 data_graph=rdf_graph,
                 shacl_graph=shacl_graph,
                 inference='rdfs',
-                abort_on_error=False,
+                abort_on_first=False,
                 meta_shacl=False,
                 advanced=True,
                 debug=False
