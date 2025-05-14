@@ -1,10 +1,8 @@
-# RDF & SHACL Generator + Validator + Ontology Visualizer Using LLM
-
-[View live website here](https://llm-rdf-shacl-creation-5623b0cfb7c0.herokuapp.com/)
-
 # 🧪 RDF & SHACL Generator + Validator + Ontology Visualizer
 
 This Streamlit application is a tool for materials scientists and semantic web developers who need to convert material test data into structured RDF (Resource Description Framework) and SHACL (Shapes Constraint Language) models. The app offers a robust pipeline enhanced by LLM-powered correction and explanation logic to improve data quality and semantic modeling.
+
+[View live website here](https://llm-rdf-shacl-creation-5623b0cfb7c0.herokuapp.com/)
 
 ---
 
