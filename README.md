@@ -1,4 +1,4 @@
-# 🧪 AI-Powered Semantic Data Generator
+# 🧪 SemAiOn (Semantic + AI + Ontology): AI-Powered Semantic Data Generator
 
 This Streamlit application is a tool for materials scientists and semantic web developers who need to convert material test data into structured RDF (Resource Description Framework) and SHACL (Shapes Constraint Language) models. The app offers a robust pipeline enhanced by LLM-powered correction and explanation logic to improve data quality and semantic modeling.
 
