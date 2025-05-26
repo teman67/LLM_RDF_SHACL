@@ -17,8 +17,9 @@ load_dotenv()
 # # Initialize clients
 # openai_client = OpenAI(api_key=os.getenv("OPENAI_API_KEY"))
 # anthropic_client = Anthropic(api_key=os.getenv("ANTHROPIC_API_KEY"))
-st.set_page_config(page_title="SemAion", layout="wide")
-st.title("🔬 SemAiOn (Semantic + AI + Ontology): AI-Powered Semantic Data Generator")
+st.set_page_config(page_title="SemAiOn", layout="wide")
+st.title("🔬 SemAiOn (Semantic + AI + Ontology)")
+st.title("AI-Powered Semantic Data Generator")
 
 # Add API key input fields to the sidebar
 st.sidebar.header("API Keys")
