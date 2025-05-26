@@ -1,1 +1,1 @@
-web: sh setup.sh && streamlit run ./rdf_shacl_reflection_streamlit.py
+web: sh setup.sh && streamlit run ./rdf_shacl_reflection_v2_streamlit.py
