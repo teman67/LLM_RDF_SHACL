@@ -18,7 +18,7 @@ load_dotenv()
 # openai_client = OpenAI(api_key=os.getenv("OPENAI_API_KEY"))
 # anthropic_client = Anthropic(api_key=os.getenv("ANTHROPIC_API_KEY"))
 st.set_page_config(page_title="RDF & SHACL Generator Using LLM", layout="wide")
-st.title("🔬 RDF & SHACL Generator + Validator + Ontology Visualizer Using LLM")
+st.title("🔬 AI-Powered Semantic Data Generator")
 
 # Add API key input fields to the sidebar
 st.sidebar.header("API Keys")
@@ -77,7 +77,7 @@ else:  # Ollama
                            help="Lower values make responses more focused and deterministic. Higher values make output more random and creative.")
 
 # Add option for number of self-correction attempts
-st.sidebar.markdown("**Number of Attempts to Optimize the RDF/SHACL files**")
+# st.sidebar.markdown("**Number of Attempts to Optimize the RDF/SHACL files**")
 max_attempts_opimization = st.sidebar.number_input(
     "How many attempt to generate RDF/SHACL data?", 
     min_value=1, 
@@ -87,7 +87,7 @@ max_attempts_opimization = st.sidebar.number_input(
 )
 
 # Add option for number of self-correction attempts
-st.sidebar.markdown("**Self-Correction Attempts for Validation Part**")
+# st.sidebar.markdown("**Self-Correction Attempts for Validation Part**")
 max_attempts_correction = st.sidebar.number_input(
     "How many attempt to correct RDF/SHACL data to pass the validation process?", 
     min_value=1, 
@@ -744,17 +744,6 @@ Both outputs must be syntactically valid and semantically aligned with materials
                         key="download_validated_shacl"
                     )
 
-                # Model summary
-                # st.markdown("### 📊 **Model Summary**")
-                # try:
-                #     g = Graph()
-                #     g.parse(data=rdf_code, format="turtle")
-                #     st.metric("Total Triples", len(g))
-                #     st.metric("Unique Subjects", len(set(g.subjects())))
-                #     st.metric("Unique Predicates", len(set(g.predicates())))
-                #     st.metric("Unique Objects", len(set(g.objects())))
-                # except Exception as e:
-                #     st.info("Could not generate model statistics")
 
             else:
 
@@ -813,13 +802,7 @@ Both outputs must be syntactically valid and semantically aligned with materials
                         rdf_code = new_rdf
                         shacl_code = new_shacl
                         
-                        # Show what was generated for this attempt
-                        # with st.expander(f"🔧 Generated Fix (Attempt {attempt})"):
-                        #     st.markdown("**RDF Preview:**")
-                        #     st.code(rdf_code[:300] + "..." if len(rdf_code) > 300 else rdf_code, language="turtle")
-                        #     st.markdown("**SHACL Preview:**")
-                        #     st.code(shacl_code[:300] + "..." if len(shacl_code) > 300 else shacl_code, language="turtle")
-                        
+                                                
                         # Validate the corrected versions
                         st.info(f"🔍 Validating corrected version (attempt {attempt})...")
                         conforms, validation_report = validate_rdf_shacl(rdf_code, shacl_code)
@@ -863,28 +846,7 @@ Both outputs must be syntactically valid and semantically aligned with materials
                                     help="Download the validated SHACL shapes in Turtle format"
                                 )
                             
-            #                 # Optional: Add a combined download option
-            #                 st.markdown("### 📦 **Combined Download**")
-            #                 combined_content = f"""# Validated RDF Data
-            # # Generated on: {st.session_state.get('timestamp', 'Unknown')}
-            # # Validation Status: PASSED
-
-            # {rdf_code}
-
-            # # ==========================================
-            # # SHACL Shapes for Validation
-            # # ==========================================
-
-            # {shacl_code}
-            # """
-                            
-            #                 st.download_button(
-            #                     label="⬇️ Download Both RDF + SHACL (Combined)",
-            #                     data=combined_content,
-            #                     file_name="validated_complete_model.ttl",
-            #                     mime="text/turtle",
-            #                     help="Download both RDF and SHACL in a single file"
-            #                 )
+            
                             
                             # Add summary statistics
                             st.markdown("### 📊 **Model Summary**")
